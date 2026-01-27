@@ -15,4 +15,3 @@ jobs:
         with:
           name: DealExchange-APK
           path: bin/*.apk
-
