@@ -1,96 +1,139 @@
 import flet as ft
 import requests
-import time
+import threading
 
-# Aapka Database URL
-DB_URL = "https://dealexchange-b7f4c-default-rtdb.firebaseio.com/posts.json?print=pretty"
+DB_URL = "https://dealexchange-b7f4c-default-rtdb.firebaseio.com/posts.json"
 
 def main(page: ft.Page):
-    # Page Settings
+
+    # ---------------- PAGE CONFIG ----------------
     page.title = "Deal Exchange Pro"
     page.theme_mode = ft.ThemeMode.DARK
-    page.window_width = 400
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
+    page.scroll = ft.ScrollMode.AUTO
 
-    # Function to start the real app after permissions
-    def start_real_app(e=None):
+    # ---------------- UTILS ----------------
+    def show_snack(msg, color):
+        page.snack_bar = ft.SnackBar(ft.Text(msg), bgcolor=color)
+        page.snack_bar.open = True
+        page.update()
+
+    # ---------------- MAIN APP ----------------
+    def start_app():
         page.clean()
         page.vertical_alignment = ft.MainAxisAlignment.START
-        page.horizontal_alignment = ft.CrossAxisAlignment.START
-        
-        # Header
+
         header = ft.Container(
-            content=ft.Row([
-                ft.Text("Deal Exchange 🤝", size=24, weight="bold", color="green"),
-                ft.Icon(ft.icons.NOTIFICATIONS, color="white")
-            ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
+            content=ft.Row(
+                [
+                    ft.Text("Deal Exchange 🤝", size=22, weight="bold"),
+                    ft.Icon(ft.icons.NOTIFICATIONS_ACTIVE)
+                ],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN
+            ),
             padding=10,
-            bgcolor="#1e1e1e"
+            bgcolor="#121212"
         )
 
-        # Inputs
-        user_name = ft.TextField(label="Your Name", border_color="green", border_radius=10)
-        user_offer = ft.TextField(label="What are you offering?", multiline=True, min_lines=3, border_color="green")
+        name = ft.TextField(label="Your Name", border_radius=12)
+        offer = ft.TextField(
+            label="Your Offer",
+            multiline=True,
+            min_lines=3,
+            max_lines=5,
+            border_radius=12
+        )
 
-        def send_data(e):
-            if not user_name.value or not user_offer.value:
-                page.snack_bar = ft.SnackBar(ft.Text("Please fill all fields!"), bgcolor="red")
-                page.snack_bar.open = True
-                page.update()
-                return
-            
-            # Firebase Post
+        post_list = ft.Column(scroll=ft.ScrollMode.AUTO)
+
+        def load_posts():
+            post_list.controls.clear()
             try:
-                requests.post(DB_URL, json={"user": user_name.value, "offer": user_offer.value})
-                page.snack_bar = ft.SnackBar(ft.Text("Post Uploaded Successfully!"), bgcolor="green")
-                user_name.value = ""
-                user_offer.value = ""
+                res = requests.get(DB_URL, timeout=10)
+                if res.status_code == 200 and res.json():
+                    for k, v in res.json().items():
+                        post_list.controls.append(
+                            ft.Container(
+                                content=ft.Column([
+                                    ft.Text(v.get("user", ""), weight="bold"),
+                                    ft.Text(v.get("offer", "")),
+                                ]),
+                                padding=10,
+                                margin=5,
+                                bgcolor="#1e1e1e",
+                                border_radius=10
+                            )
+                        )
             except:
-                page.snack_bar = ft.SnackBar(ft.Text("Network Error!"), bgcolor="red")
-            
-            page.snack_bar.open = True
+                pass
             page.update()
 
+        def send_post(e):
+            if not name.value or not offer.value:
+                show_snack("Fill all fields", "red")
+                return
+
+            try:
+                requests.post(DB_URL, json={
+                    "user": name.value,
+                    "offer": offer.value
+                }, timeout=10)
+
+                name.value = ""
+                offer.value = ""
+                show_snack("Post Uploaded", "green")
+                load_posts()
+            except:
+                show_snack("Network Error", "red")
+
         post_btn = ft.ElevatedButton(
-            "POST NOW", 
-            on_click=send_data, 
-            bgcolor="green", 
-            color="white", 
-            width=400,
-            height=50
+            "POST",
+            icon=ft.icons.SEND,
+            on_click=send_post
         )
 
-        page.add(header, ft.Divider(), user_name, user_offer, post_btn)
-        page.update()
-
-    # Permission Dialog
-    def show_perm_dialog():
-        dlg = ft.AlertDialog(
-            modal=True,
-            title=ft.Text("Permissions Required"),
-            content=ft.Text("This app needs Camera and Storage permissions to work properly."),
-            actions=[ft.TextButton("ALLOW", on_click=lambda _: (setattr(page.dialog, 'open', False), start_real_app(), page.update()))]
+        refresh_btn = ft.IconButton(
+            icon=ft.icons.REFRESH,
+            on_click=lambda e: load_posts()
         )
-        page.dialog = dlg
-        dlg.open = True
-        page.update()
 
-    # Splash Screen UI
-    splash = ft.Column([
-        ft.Icon(ft.icons.HANDSHAKE_ROUNDED, size=100, color="green"),
-        ft.Text("DEAL EXCHANGE", size=32, weight="bold", color="blue"),
-        ft.Text("Developed by Rizwan Ali", size=16, italic=True, color="gold"),
-        ft.Container(height=20),
-        ft.ProgressBar(width=200, color="green")
-    ], horizontal_alignment="center")
+        page.add(
+            header,
+            ft.Divider(),
+            name,
+            offer,
+            post_btn,
+            refresh_btn,
+            ft.Text("Recent Deals", size=18),
+            post_list
+        )
+
+        load_posts()
+
+    # ---------------- SPLASH ----------------
+    splash = ft.Column(
+        [
+            ft.Icon(ft.icons.HANDSHAKE, size=90, color="green"),
+            ft.Text("Deal Exchange Pro", size=28, weight="bold"),
+            ft.Text("Developed by Rizwan Ali", size=14),
+            ft.ProgressRing()
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER
+    )
 
     page.add(splash)
     page.update()
-    
-    time.sleep(3) # Wait for splash
-    page.clean()
-    show_perm_dialog()
 
-if __name__ == "__main__":
-    ft.app(target=main)
+    # NON-BLOCKING DELAY (APK SAFE)
+    def delayed_start():
+        import time
+        time.sleep(2)
+        page.clean()
+        start_app()
+
+    threading.Thread(target=delayed_start).start()
+
+
+ft.app(target=main)
