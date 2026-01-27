@@ -17,7 +17,7 @@ jobs:
         # environment isolated and avoids long runner setup steps.
         run: |
           docker run --rm \
-            -v "${{ github.workspace }}":/home/user/hostcwd \
+            -v "$GITHUB_WORKSPACE":/home/user/hostcwd \
             -w /home/user/hostcwd \
             kivy/buildozer:latest \
             buildozer android debug
