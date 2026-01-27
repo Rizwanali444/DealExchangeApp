@@ -1,28 +1,34 @@
 [app]
 title = Deal Exchange Pro
+
 package.name = dealexchangepro
 package.domain = org.rizwan
+
 source.dir = .
 source.include_exts = py,png,jpg,kv,atlas
+
 version = 1.0
 
-# Requirements
-requirements = python3, flet, requests
 
-# Permissions (Adding everything you need)
-android.permissions = INTERNET, CAMERA, RECORD_AUDIO, WRITE_EXTERNAL_STORAGE, READ_EXTERNAL_STORAGE, ACCESS_NETWORK_STATE
+# ---------------- REQUIREMENTS ----------------
+requirements = python,flet,requests
 
-# Flet Specific Settings (Very Important)
-android.entrypoint = main
-p4a.bootstrap = webview
+# ---------------- ANDROID ----------------
 android.api = 33
 android.minapi = 21
 android.sdk = 33
-android.ndk = 25b
+android.ndk = 23b
 
-# Orientation and Fullscreen
+android.permissions = INTERNET, CAMERA, RECORD_AUDIO, ACCESS_NETWORK_STATE
+
+# Flet / Python settings
+android.entrypoint = org.kivy.android.PythonActivity
+p4a.bootstrap = sdl2
+
+# ---------------- UI ----------------
 orientation = portrait
 fullscreen = 0
+
 
 [buildozer]
 log_level = 2
