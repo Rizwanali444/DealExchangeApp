@@ -1,15 +1,17 @@
-name: Build
+name: Build APK
 on: [push]
 jobs:
-  android:
+  build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: ArtemSerebrennikov/buildozer-action@v1
+      - name: Build with Buildozer
+        uses: ArtemSerebrennikov/buildozer-action@v1.6.1
         with:
           command: buildozer android debug
           repository_root: .
-      - uses: actions/upload-artifact@v2
+      - name: Upload APK
+        uses: actions/upload-artifact@v2
         with:
           name: DealExchange-APK
           path: bin/*.apk
