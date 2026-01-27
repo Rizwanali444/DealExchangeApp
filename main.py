@@ -1,6 +1,5 @@
 import flet as ft
 import requests
-import threading
 
 DB_URL = "https://dealexchange-b7f4c-default-rtdb.firebaseio.com/posts.json"
 
@@ -9,26 +8,26 @@ def main(page: ft.Page):
     # ---------------- PAGE CONFIG ----------------
     page.title = "Deal Exchange Pro"
     page.theme_mode = ft.ThemeMode.DARK
+    page.scroll = ft.ScrollMode.AUTO
     page.vertical_alignment = ft.MainAxisAlignment.CENTER
     page.horizontal_alignment = ft.CrossAxisAlignment.CENTER
-    page.scroll = ft.ScrollMode.AUTO
 
-    # ---------------- UTILS ----------------
+    # ---------------- SNACK ----------------
     def show_snack(msg, color):
         page.snack_bar = ft.SnackBar(ft.Text(msg), bgcolor=color)
         page.snack_bar.open = True
         page.update()
 
     # ---------------- MAIN APP ----------------
-    def start_app():
+    def start_app(e=None):
         page.clean()
         page.vertical_alignment = ft.MainAxisAlignment.START
 
         header = ft.Container(
-            content=ft.Row(
+            ft.Row(
                 [
                     ft.Text("Deal Exchange 🤝", size=22, weight="bold"),
-                    ft.Icon(ft.icons.NOTIFICATIONS_ACTIVE)
+                    ft.Icon(ft.icons.NOTIFICATIONS)
                 ],
                 alignment=ft.MainAxisAlignment.SPACE_BETWEEN
             ),
@@ -36,28 +35,22 @@ def main(page: ft.Page):
             bgcolor="#121212"
         )
 
-        name = ft.TextField(label="Your Name", border_radius=12)
-        offer = ft.TextField(
-            label="Your Offer",
-            multiline=True,
-            min_lines=3,
-            max_lines=5,
-            border_radius=12
-        )
+        name = ft.TextField(label="Your Name")
+        offer = ft.TextField(label="Your Offer", multiline=True, min_lines=3)
 
-        post_list = ft.Column(scroll=ft.ScrollMode.AUTO)
+        post_list = ft.Column()
 
-        def load_posts():
+        def load_posts(e=None):
             post_list.controls.clear()
             try:
-                res = requests.get(DB_URL, timeout=10)
-                if res.status_code == 200 and res.json():
-                    for k, v in res.json().items():
+                res = requests.get(DB_URL, timeout=5)
+                if res.ok and res.json():
+                    for v in res.json().values():
                         post_list.controls.append(
                             ft.Container(
-                                content=ft.Column([
+                                ft.Column([
                                     ft.Text(v.get("user", ""), weight="bold"),
-                                    ft.Text(v.get("offer", "")),
+                                    ft.Text(v.get("offer", ""))
                                 ]),
                                 padding=10,
                                 margin=5,
@@ -66,7 +59,8 @@ def main(page: ft.Page):
                             )
                         )
             except:
-                pass
+                show_snack("Failed to load posts", "red")
+
             page.update()
 
         def send_post(e):
@@ -75,11 +69,11 @@ def main(page: ft.Page):
                 return
 
             try:
-                requests.post(DB_URL, json={
-                    "user": name.value,
-                    "offer": offer.value
-                }, timeout=10)
-
+                requests.post(
+                    DB_URL,
+                    json={"user": name.value, "offer": offer.value},
+                    timeout=5
+                )
                 name.value = ""
                 offer.value = ""
                 show_snack("Post Uploaded", "green")
@@ -87,53 +81,31 @@ def main(page: ft.Page):
             except:
                 show_snack("Network Error", "red")
 
-        post_btn = ft.ElevatedButton(
-            "POST",
-            icon=ft.icons.SEND,
-            on_click=send_post
-        )
-
-        refresh_btn = ft.IconButton(
-            icon=ft.icons.REFRESH,
-            on_click=lambda e: load_posts()
-        )
-
         page.add(
             header,
-            ft.Divider(),
             name,
             offer,
-            post_btn,
-            refresh_btn,
+            ft.ElevatedButton("POST", on_click=send_post),
+            ft.IconButton(ft.icons.REFRESH, on_click=load_posts),
             ft.Text("Recent Deals", size=18),
             post_list
         )
 
         load_posts()
 
-    # ---------------- SPLASH ----------------
+    # ---------------- SPLASH (NO THREAD, NO SLEEP) ----------------
     splash = ft.Column(
         [
             ft.Icon(ft.icons.HANDSHAKE, size=90, color="green"),
             ft.Text("Deal Exchange Pro", size=28, weight="bold"),
-            ft.Text("Developed by Rizwan Ali", size=14),
-            ft.ProgressRing()
+            ft.Text("Developed by Rizwan Ali"),
+            ft.ElevatedButton("START", on_click=start_app)
         ],
         alignment=ft.MainAxisAlignment.CENTER,
         horizontal_alignment=ft.CrossAxisAlignment.CENTER
     )
 
     page.add(splash)
-    page.update()
-
-    # NON-BLOCKING DELAY (APK SAFE)
-    def delayed_start():
-        import time
-        time.sleep(2)
-        page.clean()
-        start_app()
-
-    threading.Thread(target=delayed_start).start()
 
 
 ft.app(target=main)
